@@ -1,0 +1,17 @@
+{
+  "name": "@sneeuwphp/ski",
+  "description": "⛷️ The front-end framework for Sneeuw.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ssr": "./src/ssr/index.ts"
+  },
+  "version": "0.0.1",
+  "packageManager": "yarn@4.3.1",
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "prettier": "^3.3.2",
+    "typescript": "^5.5.3"
+  }
+}
