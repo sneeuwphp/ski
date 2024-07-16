@@ -1,73 +1,91 @@
-import { Fragment } from "../runtime/render";
+import getHandler from "./handler.js";
+import { Fragment } from "../runtime/render.js";
 
+const APP_URL = "http://localhost:3000";
 const SELF_CLOSING_TAGS = new Set([
-  "area",
-  "base",
-  "br",
-  "col",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr",
+	"area",
+	"base",
+	"br",
+	"col",
+	"embed",
+	"hr",
+	"img",
+	"input",
+	"link",
+	"meta",
+	"param",
+	"source",
+	"track",
+	"wbr",
 ]);
 
+const renderArrayToString = async (elements: unknown[]): Promise<string> => {
+	return (await Promise.all(elements.map(renderToString))).join("");
+};
+
 /**
- * Renders an element to a string.
- *
- * TODO: refactor to make my own.
+ * Renders an element and its children to a string.
  */
-const renderToString = (element: unknown) => {
-  if (
-    typeof element === "string" ||
-    typeof element === "number" ||
-    typeof element === "bigint"
-  ) {
-    return String(element);
-  }
+const renderToString = async (element: unknown): Promise<string> => {
+	if (typeof element === "string") {
+		return element;
+	}
 
-  if (typeof element === "boolean") {
-    return "";
-  }
+	if (typeof element === "boolean") {
+		return "";
+	}
 
-  if (typeof element === "object" && element !== null) {
-    const { type, props, children } = element;
+	if (typeof element === "number" || typeof element === "bigint") {
+		return String(element);
+	}
 
-    if (type === Fragment || Array.isArray(element)) {
-      return (children || [])
-        .map((child: any) => renderToString(child))
-        .join("");
-    }
+	if (typeof element === "object" && element !== null) {
+		if (Array.isArray(element)) {
+			return await renderArrayToString(element);
+		}
 
-    const propsString = Object.entries(props || [])
-      .map(([key, value]) => {
-        if (typeof value === "boolean") {
-          return value ? ` ${key}` : "";
-        }
+		// TODO: add types
+		let { type, props, children } = await element;
 
-        if (key.startsWith("on")) {
-          return "";
-        }
+		if (type === Fragment) {
+			return await renderArrayToString(children);
+		}
 
-        return ` ${key}="${value}"`;
-      })
-      .join("");
+		let handler = null;
+		if (typeof type === "function") {
+			handler = getHandler(props.__source, APP_URL);
 
-    const childrenString = (children || [])
-      .map((child: any) => renderToString(child))
-      .join("");
+			props.children = await renderToString(children);
+			const result = await type(props, handler);
 
-    if (SELF_CLOSING_TAGS.has(type)) {
-      return `<${type}${propsString} />`;
-    }
+			return await renderToString(result);
+		}
 
-    return `<${type}${propsString}>${childrenString}</${type}>`;
-  }
+		const propsString = Object.entries(props || [])
+			.map(([key, value]) => {
+				if (typeof value === "boolean") {
+					return value ? ` ${key}` : "";
+				}
+
+				// remove event listeners
+				if (key.startsWith("on")) {
+					return "";
+				}
+
+				return ` ${key}="${value}"`;
+			})
+			.join("");
+
+		const childrenString = await renderArrayToString(children);
+
+		if (SELF_CLOSING_TAGS.has(type)) {
+			return `<${type}${propsString} />`;
+		}
+
+		return `<${type}${propsString}>${childrenString}</${type}>`;
+	}
+
+	return "";
 };
 
 export { renderToString };

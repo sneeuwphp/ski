@@ -44,17 +44,16 @@ export default (options: Options): void => {
 
 			let page = null;
 			try {
-				page = await options.resolve(body.path);
+				page = await options.resolve(body.path.substring(1));
 			} catch (e) {
 				throw `Could not find page '${body.path}.ski' in pages directory`;
 			}
 
-			// todo: if file has handler, call mount method
-			// how to do this with nested components?
+			// TODO: if file has handler, call mount method (same for child components, recursively)
 
 			try {
 				const renderFn = page.default();
-				const html = renderToString(renderFn);
+				const html = await renderToString(renderFn);
 
 				const layout = await options.layout();
 				const total = layout.default.replace("<!-- inject-ski -->", html);
