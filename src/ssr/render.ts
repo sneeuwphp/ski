@@ -41,21 +41,19 @@ const renderToString = async (element: unknown): Promise<string> => {
 
 	if (typeof element === "object" && element !== null) {
 		if (Array.isArray(element)) {
-			return await renderArrayToString(element);
+			return await renderArrayToString(await element);
 		}
 
-		// TODO: add types
-		let { type, props, children } = await element;
+		// TODO: add types (and reject object that don't have this exact signature)
+		let { type, props, key } = await element;
 
 		if (type === Fragment) {
-			return await renderArrayToString(children);
+			return await renderArrayToString(props.children);
 		}
 
 		let handler = null;
 		if (typeof type === "function") {
 			handler = getHandler(props.__source, APP_URL);
-
-			props.children = await renderToString(children);
 			const result = await type(props, handler);
 
 			return await renderToString(result);
@@ -67,7 +65,6 @@ const renderToString = async (element: unknown): Promise<string> => {
 					return value ? ` ${key}` : "";
 				}
 
-				// remove event listeners
 				if (key.startsWith("on")) {
 					return "";
 				}
@@ -76,7 +73,7 @@ const renderToString = async (element: unknown): Promise<string> => {
 			})
 			.join("");
 
-		const childrenString = await renderArrayToString(children);
+		const childrenString = await renderToString(props.children);
 
 		if (SELF_CLOSING_TAGS.has(type)) {
 			return `<${type}${propsString} />`;
